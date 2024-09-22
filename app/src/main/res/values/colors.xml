@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <color name="colorController">#66000000</color>
+    <color name="colorBuffering">#80CC0E0E</color>
+    <color name="colorScrubber">#8029B51A</color>
+    <color name="colorUnplayed">#801257BD</color>
+    <color name="colorPlayed">#3815A1</color>
+</resources>

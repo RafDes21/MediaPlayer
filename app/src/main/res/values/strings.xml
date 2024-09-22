@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">MediaPlayer</string>
+
+    <!--controls-->
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="fullscreen">Fullscreen</string>
+    <string name="time">00:00</string>
+
+</resources>
