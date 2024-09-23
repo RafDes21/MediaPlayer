@@ -7,4 +7,7 @@
     <string name="fullscreen">Fullscreen</string>
     <string name="time">00:00</string>
 
+    <!--background description-->
+    <string name="backgroundDescription">MediaPlayer</string>
+
 </resources>

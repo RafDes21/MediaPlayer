@@ -7,12 +7,18 @@ import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.ProgressBar
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.DefaultTimeBar
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TimeBar
@@ -31,9 +37,12 @@ class MainActivity : AppCompatActivity() {
     private var playerView: PlayerView? = null
     private var defaultTimeBar: DefaultTimeBar? = null
     private var mPlayPausePlayer: ImageView? = null
-    private var mProgress:ProgressBar? = null
+    private var mProgress: ProgressBar? = null
     private var playBackward: ImageView? = null
     private var playForward: ImageView? = null
+    private var mBackgroundPlayer: ImageView? = null
+    private var mProgressBarMain: ProgressBar? = null
+    private var mSetting:ImageView? = null
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -42,6 +51,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        playerView = binding.playerView
         initUI()
         setPlayerAndPause()
         mProgress = playerView?.findViewById(R.id.progress_player)
@@ -49,19 +59,95 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initUI() {
-        player = ExoPlayer.Builder(this).build()
-        player?.addListener(PlayerEventListener())
-        playerView = binding.playerView
 
+        val trackSelector = DefaultTrackSelector(this)
+        player = ExoPlayer.Builder(this).setTrackSelector(trackSelector).build()
+        player?.addListener(playerEventListener())
         playerView?.player = player
+        backgroundPlayer()
 
         val mediaItem = MediaItem.fromUri(VIDEO_URI)
         player?.setMediaItem(mediaItem)
         player?.prepare()
         player?.play()
-        setupTimeBar()
 
+        setupTimeBar()
         startUpdatingTimeBar()
+    }
+
+
+    private fun showQualitySelectionDialog() {
+        val trackSelector = player?.trackSelector as DefaultTrackSelector
+        val availableTracks = trackSelector.currentMappedTrackInfo
+
+        val qualities = mutableListOf<Pair<Int, String?>>() // Par de altura y calidad
+        availableTracks?.let { trackInfo ->
+            for (rendererIndex in 0 until trackInfo.rendererCount) {
+                val trackGroups = trackInfo.getTrackGroups(rendererIndex)
+                for (groupIndex in 0 until trackGroups.length) {
+                    val trackGroup = trackGroups.get(groupIndex)
+                    for (trackIndex in 0 until trackGroup.length) {
+                        val format = trackGroup.getFormat(trackIndex)
+                        val height = format.height
+                        if (height > 0) { // Solo agregar si hay altura válida
+                            qualities.add(height to "${height}p")
+                        } else if (format.label != null && format.label != "Unknown Quality") {
+                            qualities.add(0 to format.label) // Añadir si tiene etiqueta válida
+                        }
+                    }
+                }
+            }
+        }
+
+        // Ordenar por altura
+        val sortedQualities = qualities
+            .filter { it.first > 0 } // Filtra solo calidades válidas
+            .sortedBy { it.first } // Ordenar por altura
+            .map { it.second } // Mapear solo a los nombres
+
+        AlertDialog.Builder(this)
+            .setTitle("Select Quality")
+            .setItems(sortedQualities.toTypedArray()) { dialog, which ->
+                val selectedQuality = sortedQualities[which]
+                changeVideoQuality(selectedQuality)
+            }
+            .show()
+        Log.d("PlayerListener", "Qualities: $sortedQualities")
+    }
+
+    private fun changeVideoQuality(selectedQuality: String?) {
+        val trackSelector = player?.trackSelector as DefaultTrackSelector
+        val availableTracks = trackSelector.currentMappedTrackInfo
+
+        availableTracks?.let { trackInfo ->
+            for (rendererIndex in 0 until trackInfo.rendererCount) {
+                val trackGroups = trackInfo.getTrackGroups(rendererIndex)
+                for (groupIndex in 0 until trackGroups.length) {
+                    val trackGroup = trackGroups.get(groupIndex)
+                    for (trackIndex in 0 until trackGroup.length) {
+                        val format = trackGroup.getFormat(trackIndex)
+                        // Verificar si la calidad seleccionada coincide
+                        if (selectedQuality == "${format.height}p") {
+                            val parameters = trackSelector.parameters.buildUpon()
+                                .setOverrideForType(
+                                    TrackSelectionOverride(trackGroup, trackIndex)
+                                )
+                                .build()
+
+                            trackSelector.setParameters(parameters)
+                            return
+                        }
+                    }
+                }
+            }
+        }
+    }
+    private fun backgroundPlayer() {
+        mBackgroundPlayer = binding.backgroundPlayer
+        mProgressBarMain = binding.progressBarMain
+        mBackgroundPlayer?.visibility = View.VISIBLE
+        mProgressBarMain?.visibility = View.VISIBLE
+        mBackgroundPlayer?.setImageResource(R.drawable.background_player)
     }
 
     private fun startUpdatingTimeBar() {
@@ -107,6 +193,11 @@ class MainActivity : AppCompatActivity() {
         mPlayPausePlayer = playerView?.findViewById(R.id.play_pause_player)
         playBackward = playerView?.findViewById(R.id.play_backward)
         playForward = playerView?.findViewById(R.id.play_forward)
+        mSetting = playerView?.findViewById(R.id.exo_settings_player)
+
+        mSetting?.setOnClickListener {
+            showQualitySelectionDialog()
+        }
 
         mPlayPausePlayer?.setOnClickListener {
             if (player?.isPlaying == true) {
@@ -127,9 +218,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun PlayerEventListener(): Player.Listener {
+    private fun playerEventListener(): Player.Listener {
         return object : Player.Listener {
 
+            override fun onRenderedFirstFrame() {
+                super.onRenderedFirstFrame()
+                mBackgroundPlayer?.visibility = View.GONE
+                mProgressBarMain?.visibility = View.GONE
+            }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 when (playbackState) {

@@ -87,7 +87,6 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="5dp"
         app:layout_constraintBottom_toTopOf="@+id/exo_fullscreen_player"
         app:layout_constraintEnd_toStartOf="@+id/guideline_vertical_end"
         app:layout_constraintStart_toEndOf="@+id/guideline_vertical_start">
@@ -129,11 +128,22 @@
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ImageView
-        android:id="@+id/exo_fullscreen_player"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
+        android:id="@+id/exo_settings_player"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
         android:contentDescription="@string/fullscreen"
-        android:padding="2dp"
+        android:padding="6dp"
+        android:src="@drawable/ic_settings"
+        app:layout_constraintBottom_toTopOf="@+id/guideline_horizontal_bottom"
+        app:layout_constraintEnd_toStartOf="@+id/exo_fullscreen_player"
+        app:tint="@color/white" />
+
+    <ImageView
+        android:id="@+id/exo_fullscreen_player"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:contentDescription="@string/fullscreen"
+        android:padding="7dp"
         android:src="@drawable/ic_fullscreen"
         app:layout_constraintBottom_toTopOf="@+id/guideline_horizontal_bottom"
         app:layout_constraintEnd_toStartOf="@+id/guideline_vertical_end"
