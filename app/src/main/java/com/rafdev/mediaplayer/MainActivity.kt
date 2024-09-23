@@ -22,7 +22,18 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.DefaultTimeBar
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.TimeBar
+import com.google.android.gms.ads.AdListener
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.RequestConfiguration
+import com.google.android.gms.ads.admanager.AdManagerAdRequest
+import com.google.android.gms.ads.admanager.AdManagerAdView
 import com.rafdev.mediaplayer.databinding.ActivityMainBinding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.util.Arrays
 
 @UnstableApi
 class MainActivity : AppCompatActivity() {
@@ -42,7 +53,9 @@ class MainActivity : AppCompatActivity() {
     private var playForward: ImageView? = null
     private var mBackgroundPlayer: ImageView? = null
     private var mProgressBarMain: ProgressBar? = null
-    private var mSetting:ImageView? = null
+    private var mSetting: ImageView? = null
+    private var adView: AdManagerAdView? = null
+
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -50,14 +63,69 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
+        val backgroundScope = CoroutineScope(Dispatchers.IO)
+        backgroundScope.launch {
+            MobileAds.initialize(this@MainActivity) {
+                Log.d("AdManagerAdView", "MobileAds.initialize $it")
+            }
+        }
         playerView = binding.playerView
         initUI()
         setPlayerAndPause()
         mProgress = playerView?.findViewById(R.id.progress_player)
 
+        setupTestDevice()
+        adView = AdManagerAdView(this).apply {
+            adUnitId = "/21775744923/example/adaptive-banner"
+            setAdSize(AdSize.BANNER)
+        }
+        binding.adView.removeAllViews()
+        binding.adView.addView(adView)
+        val adRequest = AdManagerAdRequest.Builder().build()
+        adView!!.loadAd(adRequest)
+
+        adView!!.adListener = object : AdListener() {
+            override fun onAdClicked() {
+                // Code to be executed when the user clicks on an ad.
+            }
+
+            override fun onAdClosed() {
+                // Code to be executed when the user is about to return
+                // to the app after tapping on an ad.
+            }
+
+            override fun onAdFailedToLoad(adError: LoadAdError) {
+                Log.e("adManagerAdView", "adError: ${adError.message}")
+                val deviceId = MobileAds.getRequestConfiguration().testDeviceIds.firstOrNull()
+                Log.d("AdManager", "ID de dispositivo de prueba: $deviceId")
+            }
+
+            override fun onAdImpression() {
+                // Code to be executed when an impression is recorded
+                // for an ad.
+            }
+
+            override fun onAdLoaded() {
+                    // Obtén el ID del dispositivo
+                    val deviceId = MobileAds.getRequestConfiguration().testDeviceIds.firstOrNull()
+                    Log.d("AdManager", "ID de dispositivo de prueba: $deviceId")
+
+                Log.d("adManagerAdView", "El anuncio se ha cargado correctamente.")
+            }
+
+            override fun onAdOpened() {
+                // Code to be executed when an ad opens an overlay that
+                // covers the screen.
+            }
+        }
     }
 
+    private fun setupTestDevice() {
+
+        val testDeviceIds = Arrays.asList("65C03ADB725622F697AF793700E8B55D")
+        val configuration = RequestConfiguration.Builder().setTestDeviceIds(testDeviceIds).build()
+        MobileAds.setRequestConfiguration(configuration)
+    }
     private fun initUI() {
 
         val trackSelector = DefaultTrackSelector(this)
@@ -142,6 +210,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
     private fun backgroundPlayer() {
         mBackgroundPlayer = binding.backgroundPlayer
         mProgressBarMain = binding.progressBarMain
@@ -297,6 +366,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        adView?.destroy()
         Log.e("PlayerListener", "onDestroy")
         player?.release()
         stopUpdatingTimeBar()

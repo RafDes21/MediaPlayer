@@ -53,4 +53,7 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer.dash)
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.exoplayer.hls)
+
+    implementation("com.google.android.gms:play-services-ads:23.3.0")
+
 }
